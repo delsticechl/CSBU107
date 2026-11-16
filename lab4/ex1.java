@@ -2,128 +2,83 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-abstract class Delivery {
-    // Static field: belongs to the CLASS, not to any single object.
-    // All Delivery objects (Standard and Express) share this ONE counter.
-    private static int deliveryCount = 0;
+abstract class LibraryItem {
+    protected String id, title, author;
+    protected int days;
 
-    // Encapsulated instance fields: each object has its own copy
-    private String orderId;
-    private String customerName;
-    private double distance; // km
-    private double weight;   // kg
-
-    public Delivery(String orderId, String customerName, double distance, double weight) {
-        // Validate first, so the counter only counts SUCCESSFULLY created objects
-        if (distance <= 0) throw new IllegalArgumentException("Distance must be > 0 km");
-        if (weight <= 0) throw new IllegalArgumentException("Weight must be > 0 kg");
-        if (orderId == null || orderId.trim().isEmpty())
-            throw new IllegalArgumentException("Order ID cannot be empty");
-
-        this.orderId = orderId;
-        this.customerName = customerName;
-        this.distance = distance;
-        this.weight = weight;
-        deliveryCount++; // reached only if the object was created successfully
+    public LibraryItem(String id, String title, String author, int days) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.days = days;
     }
 
-    public abstract double calculateShippingFee();
-
-    public abstract String getType();
+    public abstract long calculateFee();
 
     public void displayInfo() {
-        System.out.printf("%-9s | Order: %-6s | Customer: %-15s | Distance: %.1f km | Weight: %.1f kg",
-                getType(), orderId, customerName, distance, weight);
+        System.out.printf("ID: %s | Title: %s | Author: %s | Days: %d",
+                id, title, author, days);
     }
 
-    // Getters only (no setters) keep the data valid after creation
-    public String getOrderId() { return orderId; }
-    public String getCustomerName() { return customerName; }
-    public double getDistance() { return distance; }
-    public double getWeight() { return weight; }
-
-    public static int getDeliveryCount() { return deliveryCount; }
+    public String getId() { return id; }
 }
 
-class StandardDelivery extends Delivery {
-    public StandardDelivery(String orderId, String customerName, double distance, double weight) {
-        super(orderId, customerName, distance, weight);
+class PrintedBook extends LibraryItem {
+    private int pages;
+
+    public PrintedBook(String id, String title, String author, int days, int pages) {
+        super(id, title, author, days);
+        this.pages = pages;
     }
 
     @Override
-    public double calculateShippingFee() {
-        return 15000 + 3000 * getDistance() + 2000 * getWeight();
+    public long calculateFee() {
+        return 5000L * days + 10L * pages;
     }
-
-    @Override
-    public String getType() { return "Standard"; }
 
     @Override
     public void displayInfo() {
+        System.out.print("[Book]     ");
         super.displayInfo();
-        System.out.printf(" | Fee: %,.0f VND%n", calculateShippingFee());
+        System.out.printf(" | Pages: %d | Fee: %,d VND%n", pages, calculateFee());
     }
 }
 
-class ExpressDelivery extends Delivery {
-    public ExpressDelivery(String orderId, String customerName, double distance, double weight) {
-        super(orderId, customerName, distance, weight);
+class Magazine extends LibraryItem {
+    private int issueNumber;
+
+    public Magazine(String id, String title, String author, int days, int issueNumber) {
+        super(id, title, author, days);
+        this.issueNumber = issueNumber;
     }
 
     @Override
-    public double calculateShippingFee() {
-        return 30000 + 5000 * getDistance() + 4000 * getWeight();
+    public long calculateFee() {
+        return 3000L * days + 2000L;
     }
-
-    @Override
-    public String getType() { return "Express"; }
 
     @Override
     public void displayInfo() {
+        System.out.print("[Magazine] ");
         super.displayInfo();
-        System.out.printf(" | Fee: %,.0f VND%n", calculateShippingFee());
+        System.out.printf(" | Issue: %d | Fee: %,d VND%n", issueNumber, calculateFee());
     }
 }
 
-public class DeliveryManagement {
+public class LibraryManagement {
     static Scanner sc = new Scanner(System.in);
 
-    static int readInt(String prompt, int min, int max) {
+    // Read an integer >= min, keep asking until valid
+    static int readInt(String prompt, int min) {
         while (true) {
             System.out.print(prompt);
+            String line = sc.nextLine().trim();
             try {
-                int v = Integer.parseInt(sc.nextLine().trim());
-                if (v >= min && v <= max) return v;
-                System.out.println("  Value must be between " + min + " and " + max + ".");
+                int value = Integer.parseInt(line);
+                if (value >= min) return value;
+                System.out.println("  Value must be >= " + min + ". Try again.");
             } catch (NumberFormatException e) {
                 System.out.println("  Please enter a valid integer.");
-            }
-        }
-    }
-
-    // Reads a number strictly greater than 0
-    static double readPositive(String prompt) {
-        while (true) {
-            System.out.print(prompt);
-            try {
-                double v = Double.parseDouble(sc.nextLine().trim());
-                if (v > 0) return v;
-                System.out.println("  Value must be > 0.");
-            } catch (NumberFormatException e) {
-                System.out.println("  Please enter a valid number.");
-            }
-        }
-    }
-
-    static double readNonNegative(String prompt) {
-        while (true) {
-            System.out.print(prompt);
-            try {
-                double v = Double.parseDouble(sc.nextLine().trim());
-                if (v >= 0) return v;
-                System.out.println("  Value must be >= 0.");
-            } catch (NumberFormatException e) {
-                System.out.println("  Please enter a valid number.");
             }
         }
     }
@@ -137,81 +92,84 @@ public class DeliveryManagement {
         }
     }
 
-    static Delivery findById(List<Delivery> list, String id) {
-        for (Delivery d : list)
-            if (d.getOrderId().equalsIgnoreCase(id)) return d;
+    static LibraryItem findById(List<LibraryItem> list, String id) {
+        for (LibraryItem item : list)
+            if (item.getId().equalsIgnoreCase(id)) return item;
         return null;
     }
 
-    static String readUniqueId(List<Delivery> list) {
+    static String readUniqueId(List<LibraryItem> list) {
         while (true) {
-            String id = readNonEmpty("  Order ID: ");
+            String id = readNonEmpty("  ID: ");
             if (findById(list, id) == null) return id;
-            System.out.println("  Duplicate order ID! Please enter a different one.");
+            System.out.println("  Duplicate ID! Please enter a different one.");
         }
     }
 
     public static void main(String[] args) {
-        List<Delivery> orders = new ArrayList<>();
+        List<LibraryItem> items = new ArrayList<>();
 
-        int n = readInt("Number of orders (N): ", 1, Integer.MAX_VALUE);
+        int n = readInt("Number of items (N): ", 1);
 
         for (int i = 1; i <= n; i++) {
-            System.out.println("\nOrder " + i + "/" + n);
-            int type = readInt("  Type (1 = Standard, 2 = Express): ", 1, 2);
-            String id = readUniqueId(orders);
-            String name = readNonEmpty("  Customer name: ");
-            double distance = readPositive("  Distance in km (> 0): ");
-            double weight = readPositive("  Weight in kg (> 0): ");
+            System.out.println("\nItem " + i + "/" + n);
+            int type;
+            while (true) {
+                type = readInt("  Type (1 = PrintedBook, 2 = Magazine): ", 1);
+                if (type <= 2) break;
+                System.out.println("  Type must be 1 or 2.");
+            }
 
-            if (type == 1) orders.add(new StandardDelivery(id, name, distance, weight));
-            else orders.add(new ExpressDelivery(id, name, distance, weight));
-        }
+            String id = readUniqueId(items);
+            String title = readNonEmpty("  Title: ");
+            String author = readNonEmpty("  Author: ");
+            int days = readInt("  Days borrowed (>= 1): ", 1);
 
-        // Display all shipping fees (polymorphism through the Delivery reference)
-        System.out.println("\n===== ALL ORDERS (fees in VND) =====");
-        for (Delivery d : orders) d.displayInfo();
-
-        // Search by order ID
-        System.out.println("\n===== SEARCH BY ORDER ID =====");
-        String searchId = readNonEmpty("Enter order ID: ");
-        Delivery found = findById(orders, searchId);
-        if (found != null) found.displayInfo();
-        else System.out.println("Order '" + searchId + "' not found.");
-
-        // Count by type and total revenue
-        int standardCount = 0, expressCount = 0;
-        double total = 0;
-        for (Delivery d : orders) {
-            if (d instanceof StandardDelivery) standardCount++;
-            else if (d instanceof ExpressDelivery) expressCount++;
-            total += d.calculateShippingFee();
-        }
-
-        // Orders above a fee threshold
-        System.out.println("\n===== ORDERS ABOVE A FEE THRESHOLD =====");
-        double threshold = readNonNegative("Enter fee threshold (VND): ");
-        boolean any = false;
-        for (Delivery d : orders) {
-            if (d.calculateShippingFee() > threshold) {
-                d.displayInfo();
-                any = true;
+            if (type == 1) {
+                int pages = readInt("  Number of pages (>= 1): ", 1);
+                items.add(new PrintedBook(id, title, author, days, pages));
+            } else {
+                int issue = readInt("  Issue number (>= 1): ", 1);
+                items.add(new Magazine(id, title, author, days, issue));
             }
         }
-        if (!any) System.out.printf("No order has a fee above %,.0f VND.%n", threshold);
+
+        // Display all items (polymorphism: LibraryItem reference)
+        System.out.println("\n===== ALL ITEMS =====");
+        for (LibraryItem item : items) {
+            item.displayInfo();
+        }
+
+        // Search by ID
+        System.out.println("\n===== SEARCH BY ID =====");
+        System.out.print("Enter ID to search: ");
+        String searchId = sc.nextLine().trim();
+        LibraryItem found = findById(items, searchId);
+        if (found != null) {
+            found.displayInfo();
+        } else {
+            System.out.println("Item with ID '" + searchId + "' not found.");
+        }
 
         // Statistics
-        System.out.println("\n===== STATISTICS =====");
-        System.out.println("Standard orders: " + standardCount);
-        System.out.println("Express orders : " + expressCount);
-        System.out.printf("Total shipping revenue: %,.0f VND%n", total);
+        int bookCount = 0, magCount = 0;
+        long total = 0;
+        LibraryItem max = items.get(0);
 
-        // Static counter
-        System.out.println("\n===== STATIC COUNTER =====");
-        System.out.println("Delivery objects created successfully: " + Delivery.getDeliveryCount());
-        System.out.println("Note: 'static' belongs to the class, not to an object. There is only one");
-        System.out.println("copy of deliveryCount, shared by every StandardDelivery and ExpressDelivery,");
-        System.out.println("so it can track how many objects the class has created in total.");
-        System.out.println("It is accessed through the class name: Delivery.getDeliveryCount().");
+        for (LibraryItem item : items) {
+            if (item instanceof PrintedBook) bookCount++;
+            else if (item instanceof Magazine) magCount++;
+
+            total += item.calculateFee();
+
+            if (item.calculateFee() > max.calculateFee()) max = item;
+        }
+
+        System.out.println("\n===== STATISTICS =====");
+        System.out.println("PrintedBook count: " + bookCount);
+        System.out.println("Magazine count   : " + magCount);
+        System.out.printf("Total revenue    : %,d VND%n", total);
+        System.out.println("Item with the highest fee:");
+        max.displayInfo();
     }
 }
